@@ -1,0 +1,58 @@
+{% extends "tethys_apps/app_no_actions.html" %}
+
+{% load static %}
+
+{% block title %}{{ tethys_app.name }}{% endblock %}
+
+{% block app_icon %}
+  {# The path you provided in your app.py is accessible through the tethys_app.icon context variable #}
+  <img src="{% if 'http' in tethys_app.icon %}{{ tethys_app.icon }}{% else %}{% static tethys_app.icon %}{% endif %}"/>
+{% endblock %}
+
+{# The name you provided in your app.py is accessible through the tethys_app.name context variable #}
+{% block app_title %}{{ tethys_app.name }}{% endblock %}
+
+{% block app_navigation_items %}
+  <li class="title">1. Select Hydrologic Variable</li>
+  <select class="form-select" aria-label="variable selector" id="select-variable">
+    <option hidden disabled selected value></option>
+    <option value="air_temp">Air Temperature</option>
+    <option value="ndvi">NDVI</option>
+    <option value="precip">Precipitation</option>
+    <option value="soil_moisture">Soil Moisture</option>
+    <option value="soil_temp">Soil Temperature</option>
+  </select>
+
+  <li class="title">2. Choose Satellite/Model Source</li>
+  <select class="form-select" aria-label="data source selecter" id="select-source"></select>
+
+  <li class="title">3. Load Data</li>
+  <button id="load-map" class="btn btn-outline-primary btn-styles">Load Map</button>
+  <button id="clear-map" class="btn btn-outline-primary btn-styles">Clear Map</button>
+  <button id="plot-series" class="btn btn-outline-primary btn-styles">Plot Series</button>
+{% endblock %}
+
+{% block app_content %}
+  <div id="map"></div>
+{% endblock %}
+
+{% block content_dependent_styles %}
+  {{ block.super }}
+  <link href="{% static 'hydro_var_monitor/css/main.css' %}" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+        integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+        crossorigin=""/>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  {% csrf_token %}
+  <script>
+      const URL_GETMAPID = "{% url 'hydro_var_monitor:get-map-id' %}"
+      const SOURCES = JSON.parse('{{ sources|safe }}')
+  </script>
+  <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+          integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+          crossorigin=""></script>
+  <script src="{% static 'hydro_var_monitor/js/main.js' %}" type="text/javascript" defer></script>
+{% endblock %}
