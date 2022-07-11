@@ -8,13 +8,13 @@ import ee
 from .app import HydroVarMonitor as app
 
 
-EE_IS_AUTHORIZED = False
-
 try:
+    import collections
+    collections.Callable = collections.abc.Callable
     ee.Initialize(ee.ServiceAccountCredentials(None, app.get_custom_setting('ee_auth_token_path')))
     EE_IS_AUTHORIZED = True
 except Exception as e:
-    print(str(e))
+    EE_IS_AUTHORIZED = False
 
 
 @controller(name='home', url='/', login_required=True)

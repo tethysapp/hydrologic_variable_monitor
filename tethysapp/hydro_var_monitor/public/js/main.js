@@ -7,30 +7,26 @@ const App = (() => {
 
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value
 
+    ////////////////////////////////////////////////// DOM Elements
     const selectVariable = document.getElementById("select-variable")
     const selectSource = document.getElementById("select-source")
     const btnLoadMap = document.getElementById("load-map")
     const btnClearMap = document.getElementById("clear-map")
     const btnPlotSeries = document.getElementById("plot-series")
 
-    const map = L.map("map", {
+    ////////////////////////////////////////////////// Map and Map Layers
+    const m = L.map("map", {
         zoom: 3,
         minZoom: 2,
         boxZoom: true,
         maxBounds: L.latLngBounds(L.latLng(-100, -225), L.latLng(100, 225)),
         center: [20, 0]
     })
-    const basemaps = {"Open Street Map": L.tileLayer(URL_OPENSTREETMAP).addTo(map)}
-    const eeTileLayer = L.tileLayer("").addTo(map)
-    let eeTileLayerName = "Earth Engine Layer"
-    const mapCtrls = L.control.layers(basemaps, {eeTileLayerName: eeTileLayer}).addTo(map);
+    const basemaps = {"Open Street Map": L.tileLayer(URL_OPENSTREETMAP).addTo(m)}
+    const eeTileLayer = L.tileLayer("").addTo(m)
+    const mapLyrCtrl = L.control.layers(basemaps, {"Earth Engine Layer": eeTileLayer}).addTo(m);
 
-    const getVarSourceJSON = () => {
-        return {
-            "variable": selectVariable.value,
-            "source": selectSource.value
-        }
-    }
+    const getVarSourceJSON = () => {return {"variable": selectVariable.value, "source": selectSource.value}}
 
     btnLoadMap.onclick = () => {
         const fetchParams = {
@@ -45,14 +41,16 @@ const App = (() => {
             .then(response => response.json())
             .then(map_url => {
                 eeTileLayer.setUrl(map_url.url)
+                mapLyrCtrl.removeLayer(eeTileLayer)
+                mapLyrCtrl.addOverlay(eeTileLayer, `${map_url.variable} (${map_url.source})`)
             })
             .catch(error => console.log(error))
-            .finally(() => {
-            })
+            .finally(() => {})
     }
 
-    selectVariable.onchange = (e) => {
-        selectSource.innerHTML = SOURCES[e.target.value].map(src => `<option value="${src}">${src}</option>`).join("")
-    }
+    selectVariable.onchange = (e) => selectSource.innerHTML = SOURCES[e.target.value].map(src => `<option value="${src}">${src}</option>`).join("")
+
+    btnClearMap.onclick = () => eeTileLayer.setUrl("")
+
     return {}
 })();
