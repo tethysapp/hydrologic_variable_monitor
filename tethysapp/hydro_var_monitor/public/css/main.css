@@ -10,3 +10,30 @@
 .btn-styles {
     margin-block: 3px;
 }
+
+#chart {
+    height: 500px;
+    width: 550px;
+}
+
+#loading-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 0;
+    transition: opacity .4s ease-in-out;
+    opacity: 0;
+    background: rgba(189, 180, 180, 0.57);
+}
+
+#loading-icon.appear {
+    z-index: 1000;
+    opacity: 100%;
+}
