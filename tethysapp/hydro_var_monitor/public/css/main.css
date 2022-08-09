@@ -10,3 +10,37 @@
 .btn-styles {
     margin-block: 3px;
 }
+
+.modal-content{
+    height: 800px;
+    width: 1000px;
+}
+.modal-body{
+    height: 700px;
+    width: 1000px;
+}
+
+#chart {
+    height: 550px;
+    width: 900px;
+}
+
+#loading-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: -100;
+    transition: opacity .4s ease-in-out;
+    opacity: 0;
+    background: rgba(189, 180, 180, 0.57);
+}
+
+#loading-icon.appear {
+    z-index: 1000;
+    opacity: 100%;
+}
