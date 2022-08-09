@@ -15,6 +15,7 @@ const App = (() => {
     const btnClearMap = document.getElementById("clear-map")
     const btnPlotSeries = document.getElementById("plot-series")
     const btnCompare = document.getElementById("compare")
+    const btnInstructions = document.getElementById("instructions")
 
     ////////////////////////////////////////////////// Map and Map Layers
 
@@ -84,6 +85,10 @@ const App = (() => {
      map.addControl(drawControl);
 
     const getVarSourceJSON = () => {return {"variable": selectVariable.value, "source": selectSource.value, "region" : input_spatial}}
+
+    btnInstructions.onclick = () => {
+        $('#myModal').modal()
+    }
 
     btnLoadMap.onclick = () => {
         const dataParams = getVarSourceJSON()
@@ -187,6 +192,19 @@ const App = (() => {
                 }
 
                 var layout = {
+                    legend: {
+                        x: 0,
+                        y: 1,
+                        traceorder: 'normal',
+                        font: {
+                          family: 'sans-serif',
+                          size: 12,
+                          color: '#000'
+                        },
+                        bgcolor: '#E2E2E2',
+                        bordercolor: '#FFFFFF',
+                        borderwidth: 2
+                      },
                     title: title,
                     xaxis: {
                         title: 'day of year'
@@ -232,22 +250,35 @@ const App = (() => {
                     x: date_extracted_y2d,
                     y: temp_extracted_y2d,
                     mode: 'lines',
-                    name: "year_to_date"
+                    name: "El año hasta la fecha"
                 };
 
                 var average = {
                     x: date_extracted_avg,
                     y: temp_extracted_avg,
                     mode: 'lines',
-                    name: "average for past 30 years"
+                    name:"los promedios de los últimos 30 años"
                 };
 
                 console.log(average)
-                var data = [average, year_2_date];
+                var data = [year_2_date, average];
                 var layout = {
+                    legend: {
+                        x: 0,
+                        y: 1,
+                        traceorder: 'normal',
+                        font: {
+                          family: 'sans-serif',
+                          size: 12,
+                          color: '#000'
+                        },
+                        bgcolor: '#E2E2E2',
+                        bordercolor: '#FFFFFF',
+                        borderwidth: 2
+                      },
                     title: title,
                     xaxis: {
-                        title: 'day of year'
+                        title: 'día del año'
                       },
                     yaxis: {
                         title: yaxis

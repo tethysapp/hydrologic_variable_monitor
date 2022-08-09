@@ -140,35 +140,35 @@ def get_plot(request):
         if sensor == "ERA5":
             if var == "air_temp":
                 band = "temperature_2m"
-                title = "Air Temperature - ERA5"
+                title = "Temperatura del Aire - ERA5"
                 yaxis = "temperature in K"
             if var == "precip":
                 band = "total_precipitation"
-                title = "Cumulative Precipitation - ERA5"
-                yaxis = "mm of precipitation"
+                title = "Acumulados de Precipitación - ERA5"
+                yaxis = "mm of precipitación"
             if var == "soil_temperature":
                 band = "skin_temperature"
-                title = "Surface Temperature - ERA5"
-                yaxis = "temperature in K"
+                title = "Temperatura del Suelo- ERA5"
+                yaxis = "temperatura in K"
             dict = plot_ERA5(json.loads(region), band, title, yaxis)
 
         if sensor == "GLDAS":
             if var == "precip":
                 band = "Rainf_tavg"
-                title = "Precipitation - GLDAS"
-                yaxis = "mm of precipitation"
+                title = "Acumulados de Precipitación- GLDAS"
+                yaxis = "mm of precipitación"
             if var == "air_temp":
                 band = "Tair_f_inst"
-                title = "Air Temperature - GLDAS"
-                yaxis = "temperature in K"
+                title = "Temperatura del Aire- GLDAS"
+                yaxis = "temperatura in K"
             if var == "soil_moisture":
                 band = "RootMoist_inst"
-                title = "Soil Moisture - GLDAS"
+                title = "Humedad del Suelo - GLDAS"
                 yaxis = "kg/m^2"
             if var == "soil_temperature":
                 band = "AvgSurfT_inst"
-                title = "Soil Temperature - GLDAS"
-                yaxis = "temperature in K"
+                title = "Temperatura del Suelo - GLDAS"
+                yaxis = "temperatura in K"
             dict = plot_GLDAS(json.loads(region), band, title, yaxis)
 
         if sensor == "IMERG":

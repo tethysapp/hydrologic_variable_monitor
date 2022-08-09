@@ -36,7 +36,7 @@ def plot_ERA5(region, band, title, yaxis):
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
     #read in img col
-    img_col_avg = get_collection("ECMWF/ERA5_LAND/MONTHLY", point, avg_start, now)
+    img_col_avg = ee.ImageCollection([f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
     img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", point, y2d_start, now)
 
     #define functions that will be applied
@@ -63,11 +63,25 @@ def plot_ERA5(region, band, title, yaxis):
         df['day'] = df['day'].dt.strftime('%m-%d')
         return df.groupby('day').mean()
 
-    avg_df = get_df(band, img_col_avg, point)
+    def avg_era(img):
+        return img.set('avg_value', img.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=point,
+            scale=1e6,
+        ))
+
+    avg_img = img_col_avg.select(band).map(avg_era)
     y2d_df = get_df(band, img_col_y2d, point)
+    print(y2d_df)
+
+    avg_df = pd.DataFrame(
+        avg_img.aggregate_array('avg_value').getInfo(),
+        # index=np.array(gldas_avg.aggregate_array('month').getInfo()).astype(int),
+    )
+    print(avg_df)
     #set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
-    avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=int(i[:2]), day=15) for i in avg_df.index]
+    avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i]+1, day=15) for i in avg_df.index]
     avg_df['date'] = avg_df['datetime'].dt.strftime("%Y-%m-%d")
     avg_df.reset_index(drop=True, inplace=True)
     #set year to date values
@@ -91,10 +105,11 @@ def plot_ERA5(region, band, title, yaxis):
         print(values_list)
         print(len(values_list))
         #multiply by 1000 to convert into mm from meters
-        cum_df['val_per_day'] = values_list*1000
+        cum_df['val_per_day'] = values_list
         cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
-        cum_df["data_values"] = cum_df['val_per_day'].cumsum()
+        cum_df["data_values"] = (cum_df['val_per_day']*1000).cumsum()
         avg_df= cum_df
+        print(avg_df)
 
     if band == "total_precipitation":
         y2d_df["data_values"] = (y2d_df["data_values"]*1000).cumsum()
@@ -234,8 +249,8 @@ def plot_IMERG(region):
     # cumulative depth = average mm/hr per day * 24 hours/day
     imerg_ytd_df['data_values'] = imerg_ytd_df['HQprecipitation'].cumsum() * 24
     imerg_ytd_df['date'] = imerg_ytd_df.index.strftime("%Y-%m-%d")
-    yaxis = "mm of precipitation"
-    title = "Cumulative Precipitation - IMERG"
+    yaxis = "mm de precipitación"
+    title = "Acumulados de Precipitación  - IMERG"
 
     Dict = {'avg': imerg_mon_avg_df, 'y2d': imerg_ytd_df, 'yaxis': yaxis, 'title': title}
     print(Dict)
@@ -249,7 +264,7 @@ def plot_CHIRPS(region):
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
     chirps_daily_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
-    chirps_pentad_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD')
+    chirps_pentad_ic = ee.ImageCollection([f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
 
     def clip_to_bounds(img):
         return img.updateMask(ee.Image.constant(1).clip(point).mask())
@@ -261,27 +276,27 @@ def plot_CHIRPS(region):
         ).get('precipitation'))
 
     days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])
-    end_of_month_datetimes = np.array(
-        [datetime.datetime(year=int(now[:4]), month=i, day=calendar.monthrange(int(now[:4]), i)[1]) for i in
-         range(1, 13)])
 
-    chirps_avg_ic = chirps_pentad_ic.filterDate(avg_start, now).select('precipitation').map(clip_to_bounds).map(
+    print("check")
+    chirps_avg_ic = chirps_pentad_ic.select('precipitation').map(clip_to_bounds).map(
         chirps_avg)
+    print("check2")
     chirps_df = pd.DataFrame(
         chirps_avg_ic.aggregate_array('avg_value').getInfo(),
-        index=pd.to_datetime(np.array(chirps_avg_ic.aggregate_array('system:time_start').getInfo()) * 1e6),
+
         columns=['depth', ]
     ).dropna()
+    print(chirps_df)
+    #chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
+    #chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
 
-    chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
-    chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
-    chirps_monthly_df['data_values'] = chirps_monthly_df['depth'].cumsum() * days_in_month / 5
-    chirps_monthly_df['datetime'] = end_of_month_datetimes
-    chirps_monthly_df = pd.concat(
-        [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_monthly_df.columns),
-         chirps_monthly_df])
-    chirps_monthly_df['date'] = chirps_monthly_df['datetime'].dt.strftime("%Y-%m-%d")
-    print(chirps_monthly_df)
+    chirps_df['data_values'] = chirps_df['depth'].cumsum() * days_in_month / 5
+    chirps_df['datetime'] = [datetime.datetime(year = int(now[:4]), month = chirps_df.index[i]+1, day = 15) for i in chirps_df.index]
+    #chirps_df = pd.concat(
+       # [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_df.columns),
+         #chirps_df])
+    chirps_df['date'] = chirps_df['datetime'].dt.strftime("%Y-%m-%d")
+    print(chirps_df)
 
     chirps_ytd_ic = chirps_daily_ic.filterDate(y2d_start, now).select('precipitation').map(clip_to_bounds).map(
         chirps_avg)
@@ -294,14 +309,14 @@ def plot_CHIRPS(region):
     chirps_ytd_df.index.name = 'datetime'
     chirps_ytd_df['data_values'] = chirps_ytd_df['depth'].cumsum()
     chirps_ytd_df['date'] = chirps_ytd_df.index.strftime("%Y-%m-%d")
-    yaxis = "mm of precipitation"
-    title = "Cumulative Precipitation - CHIRPS"
+    yaxis = "mm of precipitación"
+    title = "Acumulados de Precipitación - CHIRPS"
 
-    Dict = {'avg': chirps_monthly_df, 'y2d': chirps_ytd_df, 'yaxis': yaxis, 'title': title}
+    Dict = {'avg': chirps_df, 'y2d': chirps_ytd_df, 'yaxis': yaxis, 'title': title}
+    print("made it to the end")
     print(Dict)
 
     return Dict
-
 
 def plot_NDVI(region):
     print("in ndvi")

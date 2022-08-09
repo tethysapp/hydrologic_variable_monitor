@@ -6,48 +6,40 @@
 {% endblock %}
 
 {% block app_navigation_items %}
-  <li class = "title">Instructions</li>
-  <p class = "instructions">Choose a hydrologic variable, a corresponding satelite and a point on the map. Then choose load map to load a visual image of the
-  dataset or plot series to see a graph of the average values for each day of the year using values for the last 30 years compared to the
-  current years data. Please be patient. It can take up to 5 minutes to load the graphs, especially when using the GLDAS dataset.
-  If you would like to compare the average values amost several datasets, please select compare averages and it will pull up a graph of the averages
-  for the selected hydrologic variable using all the datasets.</p>
-  <li class="title">1. Select Hydrologic Variable</li>
+    <button  id="instructions" type="button" class="btn btn-primary btn-block" >Instrucciones</button>
+ <!-- <li class = "title">Instrucciones</li>
+  <p class = "instructions">Elija una variable hidrológica, un satélite correspondiente, y un punto en el mapa.
+      Entonces escoja “cargar mapa” para cargar un imagen del conjunto de datos o puedes escoger “mostrar gráfico”
+      para ver un gráfico de la variable con el paso de tiempo. Por favor tenga paciencia. A veces uno necesita
+      cinco minutos o más para cargar los gráficos.
+      Si quieres comparar los valores promedios de algunos conjuntos de datos puedes tocar “comparar promedios”.</p> -->
+  <li class="title">1. Elija Variable Hidrológica</li>
   <select class="form-select" aria-label="variable selector" id="select-variable">
     <option hidden disabled selected value></option>
-    <option value="air_temp">Air Temperature</option>
-    <option value="ndvi">NDVI</option>
-    <option value="precip">Precipitation</option>
-    <option value="soil_moisture">Soil Moisture</option>
-    <option value="soil_temperature">Soil Temperature</option>
+    <option value="air_temp">Temperatura del Aire</option>
+    <!--  <option value="ndvi">NDVI</option> -->
+    <option value="precip">Precipitación</option>
+    <option value="soil_moisture">Humedad del Suelo</option>
+    <option value="soil_temperature">Temperature del Suelo</option>
 
   </select>
 
-  <li class="title">2. Choose Satellite/Model Source</li>
+  <li class="title">2. Elija el Satélite </li>
   <select class="form-select" aria-label="data source selector" id="select-source"></select>
 
-  <li class="title">3. Load Data</li>
-  <button  id="load-map" type="button" class="btn btn-primary btn-block" >Load Map</button>
-  <button id="clear-map" type="button" class="btn btn-primary btn-block">Clear Map</button>
-  <button id="plot-series" class="btn btn-primary btn-block">Plot Series</button>
+  <li class="title">3. Cargar Datos </li>
+  <button  id="load-map" type="button" class="btn btn-primary btn-block" >Cargar Mapa</button>
+  <button id="clear-map" type="button" class="btn btn-primary btn-block">Mapa Claro</button>
+  <button id="plot-series" class="btn btn-primary btn-block">Mostrar Gráfico</button>
 
-  <li class="title">4. Compare Averages</li>
-  <button id="compare" class="btn btn-primary btn-block">Compare</button>
+  <li class="title">4. Comparar los Promedios</li>
+  <button id="compare" class="btn btn-primary btn-block">Comparar</button>
 {% endblock %}
 
 {% block app_content %}
   <div id="map"></div>
   <div id="loading-icon">
     <img src="{% static 'hydro_var_monitor/images/loader.gif' %}"/>
-  </div>
-  <div id="myModal" class="modal">
-
-  <!-- Modal content -->
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <p>Please be patient. It may take up to 5 minutes to load graph.</p>
-    </div>
-
   </div>
 {% endblock %}
 
@@ -61,7 +53,7 @@
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
                   aria-hidden="true">&times;</span></button>
           <div class="row">
-            <h2 style="text-align: center">Trends over time <span id="request-status" class="load-status"/></h2>
+            <h2 style="text-align: center">Las Tendencias con el Tiempo <span id="request-status" class="load-status"/></h2>
           </div>
         </div>
 
@@ -117,6 +109,31 @@
       </div>
     </div>
   </div>
+
+    <!-- Modal -->
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Instrucciones</h4>
+      </div>
+      <div class="modal-body">
+        <p>Elija una variable hidrológica, un satélite correspondiente, y un punto en el mapa.
+      Entonces escoja “cargar mapa” para cargar un imagen del conjunto de datos o puedes escoger “mostrar gráfico”
+      para ver un gráfico de la variable con el paso de tiempo. Por favor tenga paciencia. A veces uno necesita
+      cinco minutos o más para cargar los gráficos.
+      Si quieres comparar los valores promedios de algunos conjuntos de datos puedes tocar “comparar promedios”.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 {% endblock %}
 
 {% block content_dependent_styles %}
