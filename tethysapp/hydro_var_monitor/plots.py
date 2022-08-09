@@ -5,41 +5,46 @@ import pandas as pd
 import numpy as np
 import calendar
 
-#define functions
+
+# define functions
 def get_current_date():
-    now =  date.today().strftime("%Y-%m-%d")
-    avg_start = date.today().replace(year = date.today().year-30).strftime("%Y-%m-%d")
+    now = date.today().strftime("%Y-%m-%d")
+    avg_start = date.today().replace(year=date.today().year - 30).strftime("%Y-%m-%d")
     y2d_start = date(date.today().year, 1, 1).strftime("%Y-%m-%d")
     return now, avg_start, y2d_start
 
-def get_collection(collection_name, xy_point, start_date = '1992-01-01', end_date = '2023-01-01'):
-  print('get_collection')
-  return (
-    ee.ImageCollection(collection_name)
-    .filterBounds(xy_point)
-    .filterDate(start_date, end_date)
+
+def get_collection(collection_name, xy_point, start_date='1992-01-01', end_date='2023-01-01'):
+    print('get_collection')
+    return (
+        ee.ImageCollection(collection_name)
+        .filterBounds(xy_point)
+        .filterDate(start_date, end_date)
     )
 
+
 def set_ymd_properties(img):
-  date = ee.Date(img.get('system:time_start'))
-  return img.set({
-      'date': date.format('YYYY-MM-DD'),
-      'month_day': date.format('MM-DD'),
-      'year': date.format('YYYY'),
-      'month': date.format('MM'),
-      'day': date.format('DD')
-  })
+    date = ee.Date(img.get('system:time_start'))
+    return img.set({
+        'date': date.format('YYYY-MM-DD'),
+        'month_day': date.format('MM-DD'),
+        'year': date.format('YYYY'),
+        'month': date.format('MM'),
+        'day': date.format('DD')
+    })
+
 
 def plot_ERA5(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
 
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
-    #read in img col
-    img_col_avg = ee.ImageCollection([f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
+    # read in img col
+    img_col_avg = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
     img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", point, y2d_start, now)
 
-    #define functions that will be applied
+    # define functions that will be applied
     def get_val_at_xypoint(img):
         # reduction function
         temp = img.reduceRegion(
@@ -53,7 +58,7 @@ def plot_ERA5(region, band, title, yaxis):
     def get_df(band_name, img_col, region):
         era_df = img_col.select(band_name)
         era_with_property = era_df.map(get_val_at_xypoint)
-        #create an array of values that are extracted from image collection
+        # create an array of values that are extracted from image collection
         array_of_values = era_with_property.aggregate_array(band_name).getInfo()
         array_of_datetime_values = era_with_property.aggregate_array('system:time_start').getInfo()
         # find the average by day
@@ -79,18 +84,18 @@ def plot_ERA5(region, band, title, yaxis):
         # index=np.array(gldas_avg.aggregate_array('month').getInfo()).astype(int),
     )
     print(avg_df)
-    #set date and data values columns that the js code will look for
+    # set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
-    avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i]+1, day=15) for i in avg_df.index]
+    avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
     avg_df['date'] = avg_df['datetime'].dt.strftime("%Y-%m-%d")
     avg_df.reset_index(drop=True, inplace=True)
-    #set year to date values
+    # set year to date values
     y2d_df.columns = ["data_values"]
     y2d_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=int(i[:2]), day=int(i[3:5])) for i in y2d_df.index]
     y2d_df['date'] = y2d_df['datetime'].dt.strftime("%Y-%m-%d")
     y2d_df.reset_index(drop=True, inplace=True)
     print(y2d_df)
-    #precipitation must be cumulatively summer throughout the year
+    # precipitation must be cumulatively summer throughout the year
     if band == "total_precipitation":
         date_generated = pd.date_range(y2d_start, periods=365)
         cum_df = pd.DataFrame(date_generated)
@@ -104,20 +109,19 @@ def plot_ERA5(region, band, title, yaxis):
                 i = i + 1
         print(values_list)
         print(len(values_list))
-        #multiply by 1000 to convert into mm from meters
+        # multiply by 1000 to convert into mm from meters
         cum_df['val_per_day'] = values_list
         cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
-        cum_df["data_values"] = (cum_df['val_per_day']*1000).cumsum()
-        avg_df= cum_df
+        cum_df["data_values"] = (cum_df['val_per_day'] * 1000).cumsum()
+        avg_df = cum_df
         print(avg_df)
 
     if band == "total_precipitation":
-        y2d_df["data_values"] = (y2d_df["data_values"]*1000).cumsum()
+        y2d_df["data_values"] = (y2d_df["data_values"] * 1000).cumsum()
     else:
         y2d_df["data_values"] = y2d_df["data_values"]
 
-    Dict = {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis':yaxis}
-    print(Dict)
+    Dict = {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis': yaxis}
 
     return Dict
 
@@ -128,10 +132,10 @@ def plot_GLDAS(region, band, title, yaxis):
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
     gldas_ic = ee.ImageCollection("NASA/GLDAS/V021/NOAH/G025/T3H")
-    #define necessary functions
+
+    # define necessary functions
     def clip_to_bounds(img):
         return img.updateMask(ee.Image.constant(1).clip(point).mask())
-
 
     def avg_gldas(img):
         return img.set('avg_value', img.reduceRegion(
@@ -139,13 +143,15 @@ def plot_GLDAS(region, band, title, yaxis):
             geometry=point,
             scale=1e6,
         ))
-    #read in assets from the gldas_monthly folder
-    gldas_monthly = ee.ImageCollection([f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
+
+    # read in assets from the gldas_monthly folder
+    gldas_monthly = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
     gldas_monthly = gldas_monthly.map(avg_gldas)
     gldas_avg_df = pd.DataFrame(
         gldas_monthly.aggregate_array('avg_value').getInfo(),
     )
-    #precipitation must be summed
+    # precipitation must be summed
     if band == "Rainf_tavg":
         print("check")
         date_generated = pd.date_range(y2d_start, periods=365)
@@ -158,7 +164,7 @@ def plot_GLDAS(region, band, title, yaxis):
             # print (date)
             for val in gldas_avg_df["Rainf_tavg"]:
                 if date.month == i:
-                    #convert from seconds to days
+                    # convert from seconds to days
                     values_list.append(val * 86400)
                 i = i + 1
         cum_df['val_per_day'] = values_list
@@ -178,16 +184,16 @@ def plot_GLDAS(region, band, title, yaxis):
     )
     gldas_ytd_df['date'] = gldas_ytd_df.index.strftime("%Y-%m-%d")
 
-
     if band == "Rainf_tavg":
         # multiply values by seconds in 3 hours because they are in 3 hour chunks
-        gldas_ytd_df["data_values"] = (gldas_ytd_df[band]*10800).cumsum()
+        gldas_ytd_df["data_values"] = (gldas_ytd_df[band] * 10800).cumsum()
     else:
         gldas_ytd_df["data_values"] = gldas_ytd_df[band]
 
-    Dict = {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis':yaxis}
+    Dict = {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis': yaxis}
 
     return Dict
+
 
 def plot_IMERG(region):
     now, avg_start, y2d_start = get_current_date()
@@ -227,12 +233,12 @@ def plot_IMERG(region):
     print(imerg_mon_avg_df)
     imerg_mon_avg_df['date'] = imerg_mon_avg_df['datetime'].dt.strftime("%Y-%m-%d")
     print(imerg_mon_avg_df)
-    #imerg_mon_avg_df = pd.concat(
-     #   [pd.DataFrame([[0, 0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=imerg_mon_avg_df.columns),
-      #   imerg_mon_avg_df])
+    # imerg_mon_avg_df = pd.concat(
+    #   [pd.DataFrame([[0, 0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=imerg_mon_avg_df.columns),
+    #   imerg_mon_avg_df])
 
     imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
-    print ("check1")
+    print("check1")
 
     imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation').filterDate(y2d_start, now).map(avg_in_bounds)
 
@@ -264,7 +270,8 @@ def plot_CHIRPS(region):
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
     chirps_daily_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
-    chirps_pentad_ic = ee.ImageCollection([f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
+    chirps_pentad_ic = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
 
     def clip_to_bounds(img):
         return img.updateMask(ee.Image.constant(1).clip(point).mask())
@@ -287,14 +294,15 @@ def plot_CHIRPS(region):
         columns=['depth', ]
     ).dropna()
     print(chirps_df)
-    #chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
-    #chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
+    # chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
+    # chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
 
     chirps_df['data_values'] = chirps_df['depth'].cumsum() * days_in_month / 5
-    chirps_df['datetime'] = [datetime.datetime(year = int(now[:4]), month = chirps_df.index[i]+1, day = 15) for i in chirps_df.index]
-    #chirps_df = pd.concat(
-       # [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_df.columns),
-         #chirps_df])
+    chirps_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=chirps_df.index[i] + 1, day=15) for i in
+                             chirps_df.index]
+    # chirps_df = pd.concat(
+    # [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_df.columns),
+    # chirps_df])
     chirps_df['date'] = chirps_df['datetime'].dt.strftime("%Y-%m-%d")
     print(chirps_df)
 
@@ -317,6 +325,7 @@ def plot_CHIRPS(region):
     print(Dict)
 
     return Dict
+
 
 def plot_NDVI(region):
     print("in ndvi")
@@ -425,7 +434,3 @@ def plot_NDVI(region):
     Dict = {'avg': avg, 'y2d': avg}
 
     return Dict
-
-
-
-
