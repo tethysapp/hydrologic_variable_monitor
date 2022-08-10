@@ -195,30 +195,36 @@ def plot_IMERG(region):
             geometry=point,
         ))
 
-    imerg_1m_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_MONTHLY_V06")
+    imerg_1m_ic = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/imerg_monthly_avg/imerg_monthly_avg_{i:02}' for i in range(1, 13)])
 
-    imerg_1m_values_ic = imerg_1m_ic.select('precipitation').map(avg_in_bounds)
+    imerg_1m_values_ic = imerg_1m_ic.select('HQprecipitation').map(avg_in_bounds)
 
     imerg_1m_df = pd.DataFrame(
         imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
-        index=pd.to_datetime(np.array(imerg_1m_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6, )
     ).dropna()
 
-    # depth = mm/hr * days_in_month * hours_in_day
-    imerg_1m_df['precip_depth'] = imerg_1m_df['precipitation'] * np.array(
-        [calendar.monthrange(i.year, i.month)[1] * 24 for i in imerg_1m_df.index])
+    print(imerg_1m_df)
 
-    # group
-    imerg_mon_avg_df = imerg_1m_df.groupby(imerg_1m_df.index.month).mean()
-    imerg_mon_avg_df['data_values'] = imerg_mon_avg_df['precip_depth'].cumsum()
+    date_generated = pd.date_range(y2d_start, periods=365)
+    cum_df = pd.DataFrame(date_generated)
 
-    imerg_mon_avg_df['datetime'] = [
-        datetime.datetime(year=int(now[:4]), month=i, day=calendar.monthrange(int(now[:4]), i)[1]) for i in
-        imerg_mon_avg_df.index]
-    imerg_mon_avg_df['date'] = imerg_mon_avg_df['datetime'].dt.strftime("%Y-%m-%d")
-    # imerg_mon_avg_df = pd.concat(
-    #   [pd.DataFrame([[0, 0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=imerg_mon_avg_df.columns),
-    #   imerg_mon_avg_df])
+    values_list = []
+    for date in cum_df[0]:
+        i = 1
+        # print("printing date")
+        # print (date)
+        for val in imerg_1m_df["HQprecipitation"]:
+            if date.month == i:
+                values_list.append(val * 24)
+            i = i + 1
+    # print(values_list)
+
+    cum_df["val_per_day"] = values_list
+    cum_df["data_values"] = cum_df["val_per_day"].cumsum()
+
+    cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
+    print(cum_df)
 
     imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
 
@@ -237,10 +243,11 @@ def plot_IMERG(region):
     # cumulative depth = average mm/hr per day * 24 hours/day
     imerg_ytd_df['data_values'] = imerg_ytd_df['HQprecipitation'].cumsum() * 24
     imerg_ytd_df['date'] = imerg_ytd_df.index.strftime("%Y-%m-%d")
-    yaxis = "mm de precipitación"
-    title = "Acumulados de Precipitación  - IMERG"
 
-    Dict = {'avg': imerg_mon_avg_df, 'y2d': imerg_ytd_df, 'yaxis': yaxis, 'title': title}
+    yaxis = "mm of precipitación"
+    title = "Acumulados de Precipitación - IMERG"
+
+    Dict = {'avg': cum_df, 'y2d': imerg_ytd_df, 'yaxis': yaxis, 'title': title}
 
     return Dict
 
