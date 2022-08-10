@@ -15,7 +15,6 @@ def get_current_date():
 
 
 def get_collection(collection_name, xy_point, start_date='1992-01-01', end_date='2023-01-01'):
-    print('get_collection')
     return (
         ee.ImageCollection(collection_name)
         .filterBounds(xy_point)
@@ -77,13 +76,11 @@ def plot_ERA5(region, band, title, yaxis):
 
     avg_img = img_col_avg.select(band).map(avg_era)
     y2d_df = get_df(band, img_col_y2d, point)
-    print(y2d_df)
 
     avg_df = pd.DataFrame(
         avg_img.aggregate_array('avg_value').getInfo(),
         # index=np.array(gldas_avg.aggregate_array('month').getInfo()).astype(int),
     )
-    print(avg_df)
     # set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
     avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
@@ -94,12 +91,10 @@ def plot_ERA5(region, band, title, yaxis):
     y2d_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=int(i[:2]), day=int(i[3:5])) for i in y2d_df.index]
     y2d_df['date'] = y2d_df['datetime'].dt.strftime("%Y-%m-%d")
     y2d_df.reset_index(drop=True, inplace=True)
-    print(y2d_df)
     # precipitation must be cumulatively summer throughout the year
     if band == "total_precipitation":
         date_generated = pd.date_range(y2d_start, periods=365)
         cum_df = pd.DataFrame(date_generated)
-        print(cum_df)
         values_list = []
         for date in cum_df[0]:
             i = 1
@@ -107,14 +102,11 @@ def plot_ERA5(region, band, title, yaxis):
                 if date.month == i:
                     values_list.append(val)
                 i = i + 1
-        print(values_list)
-        print(len(values_list))
         # multiply by 1000 to convert into mm from meters
         cum_df['val_per_day'] = values_list
         cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
         cum_df["data_values"] = (cum_df['val_per_day'] * 1000).cumsum()
         avg_df = cum_df
-        print(avg_df)
 
     if band == "total_precipitation":
         y2d_df["data_values"] = (y2d_df["data_values"] * 1000).cumsum()
@@ -127,7 +119,6 @@ def plot_ERA5(region, band, title, yaxis):
 
 
 def plot_GLDAS(region, band, title, yaxis):
-    print("in GLDAS")
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
@@ -153,10 +144,8 @@ def plot_GLDAS(region, band, title, yaxis):
     )
     # precipitation must be summed
     if band == "Rainf_tavg":
-        print("check")
         date_generated = pd.date_range(y2d_start, periods=365)
         cum_df = pd.DataFrame(date_generated)
-        print(cum_df)
         values_list = []
         for date in cum_df[0]:
             i = 1
@@ -199,7 +188,6 @@ def plot_IMERG(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
-    print("IMERG")
 
     def avg_in_bounds(img):
         return img.set('avg_value', img.reduceRegion(
@@ -207,38 +195,38 @@ def plot_IMERG(region):
             geometry=point,
         ))
 
-    imerg_1m_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_MONTHLY_V06")
+    imerg_1m_ic = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/imerg_monthly_avg/imerg_monthly_avg_{i:02}' for i in range(1, 13)])
 
-    imerg_1m_values_ic = imerg_1m_ic.select('precipitation').map(avg_in_bounds)
-    print("check 2")
+    imerg_1m_values_ic = imerg_1m_ic.select('HQprecipitation').map(avg_in_bounds)
 
     imerg_1m_df = pd.DataFrame(
         imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
-        index=pd.to_datetime(np.array(imerg_1m_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6, )
     ).dropna()
-    print("finished aggregate")
 
-    # depth = mm/hr * days_in_month * hours_in_day
-    imerg_1m_df['precip_depth'] = imerg_1m_df['precipitation'] * np.array(
-        [calendar.monthrange(i.year, i.month)[1] * 24 for i in imerg_1m_df.index])
+    print(imerg_1m_df)
 
-    # group
-    imerg_mon_avg_df = imerg_1m_df.groupby(imerg_1m_df.index.month).mean()
-    imerg_mon_avg_df['data_values'] = imerg_mon_avg_df['precip_depth'].cumsum()
-    print("check3")
+    date_generated = pd.date_range(y2d_start, periods=365)
+    cum_df = pd.DataFrame(date_generated)
 
-    imerg_mon_avg_df['datetime'] = [
-        datetime.datetime(year=int(now[:4]), month=i, day=calendar.monthrange(int(now[:4]), i)[1]) for i in
-        imerg_mon_avg_df.index]
-    print(imerg_mon_avg_df)
-    imerg_mon_avg_df['date'] = imerg_mon_avg_df['datetime'].dt.strftime("%Y-%m-%d")
-    print(imerg_mon_avg_df)
-    # imerg_mon_avg_df = pd.concat(
-    #   [pd.DataFrame([[0, 0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=imerg_mon_avg_df.columns),
-    #   imerg_mon_avg_df])
+    values_list = []
+    for date in cum_df[0]:
+        i = 1
+        # print("printing date")
+        # print (date)
+        for val in imerg_1m_df["HQprecipitation"]:
+            if date.month == i:
+                values_list.append(val * 24)
+            i = i + 1
+    # print(values_list)
+
+    cum_df["val_per_day"] = values_list
+    cum_df["data_values"] = cum_df["val_per_day"].cumsum()
+
+    cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
+    print(cum_df)
 
     imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
-    print("check1")
 
     imerg_ytd_values_ic = imerg_30min_ic.select('HQprecipitation').filterDate(y2d_start, now).map(avg_in_bounds)
 
@@ -255,17 +243,16 @@ def plot_IMERG(region):
     # cumulative depth = average mm/hr per day * 24 hours/day
     imerg_ytd_df['data_values'] = imerg_ytd_df['HQprecipitation'].cumsum() * 24
     imerg_ytd_df['date'] = imerg_ytd_df.index.strftime("%Y-%m-%d")
-    yaxis = "mm de precipitación"
-    title = "Acumulados de Precipitación  - IMERG"
 
-    Dict = {'avg': imerg_mon_avg_df, 'y2d': imerg_ytd_df, 'yaxis': yaxis, 'title': title}
-    print(Dict)
+    yaxis = "mm of precipitación"
+    title = "Acumulados de Precipitación - IMERG"
+
+    Dict = {'avg': cum_df, 'y2d': imerg_ytd_df, 'yaxis': yaxis, 'title': title}
 
     return Dict
 
 
 def plot_CHIRPS(region):
-    print("in CHIRPS")
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
@@ -284,16 +271,13 @@ def plot_CHIRPS(region):
 
     days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])
 
-    print("check")
     chirps_avg_ic = chirps_pentad_ic.select('precipitation').map(clip_to_bounds).map(
         chirps_avg)
-    print("check2")
     chirps_df = pd.DataFrame(
         chirps_avg_ic.aggregate_array('avg_value').getInfo(),
 
         columns=['depth', ]
     ).dropna()
-    print(chirps_df)
     # chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
     # chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
 
@@ -304,7 +288,6 @@ def plot_CHIRPS(region):
     # [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_df.columns),
     # chirps_df])
     chirps_df['date'] = chirps_df['datetime'].dt.strftime("%Y-%m-%d")
-    print(chirps_df)
 
     chirps_ytd_ic = chirps_daily_ic.filterDate(y2d_start, now).select('precipitation').map(clip_to_bounds).map(
         chirps_avg)
@@ -321,14 +304,11 @@ def plot_CHIRPS(region):
     title = "Acumulados de Precipitación - CHIRPS"
 
     Dict = {'avg': chirps_df, 'y2d': chirps_ytd_df, 'yaxis': yaxis, 'title': title}
-    print("made it to the end")
-    print(Dict)
 
     return Dict
 
 
 def plot_NDVI(region):
-    print("in ndvi")
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
     point = ee.Geometry.Point(get_coord["coordinates"])
@@ -347,6 +327,25 @@ def plot_NDVI(region):
 
         # Get the pixel QA band.
         qa = image.select('pixel_qa');
+
+        # apply the bit shift and get binary image of different QA flags
+        cloud_shadow_qa = qa.bitwiseAnd(cloudShadowBitMask).eq(0)
+        snow_qa = qa.bitwiseAnd(snowBitMask).eq(0)
+        cloud_qa = qa.bitwiseAnd(cloudsBitMask).eq(0)
+
+        # combine qa mask layers to one final mask
+        mask = cloud_shadow_qa.And(snow_qa).And(cloud_qa)
+
+        # apply mask and return orignal image
+        return image.updateMask(mask);
+    def qa_mask_L8(image):
+        # Bits 3, 4, and 5 are cloud shadow, snow, and cloud, respectively.
+        cloudShadowBitMask = (1 << 3);
+        cloudsBitMask = (1 << 5);
+        snowBitMask = (1 << 4);
+
+        # Get the pixel QA band.
+        qa = image.select('QA_PIXEL');
 
         # apply the bit shift and get binary image of different QA flags
         cloud_shadow_qa = qa.bitwiseAnd(cloudShadowBitMask).eq(0)
@@ -395,23 +394,34 @@ def plot_NDVI(region):
     )
     # load on Landsat 8 collection
     l8_collection = (
-        ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+        ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
         # filter by sample locations
         .filterBounds(point)
         # apply qa mask
-        .map(qa_mask)
+        #.map(qa_mask_L8)
         # select the spectral bands and rename
         .select(
-            ["B2", "B3", "B4", "B5", "B6", "B7"],
+            ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"],
             ["blue", "green", "red", "nir", "swir1", "swir2"]
         )
     )
 
     # merge all of the collections together for long time series
     landsat_ic = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(point).map(add_ndvi).select(
-        'ndvi').map(landsat_avg).map(set_ymd_properties)
+        'ndvi').filterDate(avg_start, now).map(landsat_avg).map(set_ymd_properties)
     month_list = ee.List(['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'])
-    print(month_list)
+
+    landsat_ic_y2d = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(point).map(add_ndvi).select(
+        'ndvi').filterDate(y2d_start, now).map(landsat_avg)
+    y2d_plot = landsat_ic_y2d.aggregate_array('avgndvi').getInfo()
+    y2d_date = landsat_ic_y2d.aggregate_array('system:time_start').getInfo()
+    dates = pd.to_datetime(np.array(y2d_date) * 1e6)
+
+    y2d = pd.DataFrame(y2d_plot)
+
+    y2d["data_values"] = y2d[0]
+    y2d["day"] = dates
+    y2d["date"] = y2d["day"].dt.strftime("%Y-%m-%d")
 
     def avg_landsat_month(month_str):
         return landsat_ic.filterMetadata('month', 'equals', month_str).mean()
@@ -419,18 +429,13 @@ def plot_NDVI(region):
     test_ic = ee.ImageCollection.fromImages(month_list.map(avg_landsat_month)).map(landsat_avg)
 
     info_to_plot = test_ic.aggregate_array('avgndvi').getInfo()
-    print(info_to_plot)
 
     avg = pd.DataFrame(info_to_plot)
-    print(avg)
     avg['data_values'] = avg[0]
-    print(avg)
 
-    avg['datetime'] = [datetime.datetime(year=int(now[:4]), month=i, day=15) for i in range(1, 13)]
-    avg['date'] = avg['datetime'].dt.strftime("%Y-%m-%d")
-    # print(checking)
-    print(avg)
+    avg['date'] = [datetime.datetime(year = int(now[:4]), month = avg.index[i]+1, day = 15) for i in avg.index]
 
-    Dict = {'avg': avg, 'y2d': avg}
+    Dict = {'avg': avg, 'y2d': y2d, 'title':"NDVI", ' yaxis': "NO IDEA"}
+    print(Dict)
 
     return Dict
