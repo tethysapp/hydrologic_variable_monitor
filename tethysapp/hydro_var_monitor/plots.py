@@ -172,7 +172,7 @@ def plot_GLDAS(region, band, title, yaxis):
     gldas_ytd_df['date'] = gldas_ytd_df.index.strftime("%Y-%m-%d")
 
     if band == "Rainf_f_tavg":
-        gldas_ytd_df["data_values"] = gldas_ytd_df[band].cumsum()
+        gldas_ytd_df["data_values"] = (gldas_ytd_df[band] * 10800).cumsum()
     else:
         gldas_ytd_df["data_values"] = gldas_ytd_df[band]
         gldas_ytd_df = gldas_ytd_df.groupby('date').mean()

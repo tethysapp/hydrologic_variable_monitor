@@ -68,89 +68,111 @@ def precip_compare(region):
         gldas_monthly.aggregate_array('avg_value').getInfo(),
     )
     # consider that each day is growing at the average monthly rate
-    date_generated = pd.date_range(y2d_start, periods=365)
-    cum_df = pd.DataFrame(date_generated)
+    img_col_avg = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
+
+
+    avg_img = img_col_avg.select("total_precipitation").map(avg_gldas)
+
+    avg_df = pd.DataFrame(
+        avg_img.aggregate_array('avg_value').getInfo(),
+    )
+    # consider that each day is growing at the average monthly rate
+    date_generated_gldas = pd.date_range(y2d_start, periods=365)
+    cum_df_gldas = pd.DataFrame(date_generated_gldas)
     values_list = []
-    for date in cum_df[0]:
+    for date in cum_df_gldas[0]:
         i = 1
         for val in gldas_avg_df["Rainf_tavg"]:
             if date.month == i:
                 values_list.append(val * 86400)  # it is a rate per second - 86400 seconds in day convert to per day
             i = i + 1
-    cum_df['val_per_day'] = values_list
+    cum_df_gldas['val_per_day'] = values_list
     # code will look for columns names 'date' and 'data_values' so rename to those
-    cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
-    cum_df["data_values"] = cum_df['val_per_day'].cumsum()
-    gldas_avg_df = cum_df
-
-    # get era5 data
-    era5_col = get_collection("ECMWF/ERA5_LAND/MONTHLY", point, avg_start, now)
-    era5_df = get_df("total_precipitation", era5_col, point)
-    cum_df_era5 = pd.DataFrame(date_generated)
-    values_list_era5 = []
-
-    # print(cum_df_era5[0])
-    for date in cum_df_era5[0]:
+    cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
+    cum_df_gldas["data_values"] = cum_df_gldas['val_per_day'].cumsum()
+    gldas_avg_df = cum_df_gldas
+    # set date and data values columns that the js code will look for
+    avg_df.columns = ["data_values"]
+    avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
+    avg_df['date'] = avg_df['datetime'].dt.strftime("%Y-%m-%d")
+    avg_df.reset_index(drop=True, inplace=True)
+    # precipitation must be cumulatively summer throughout the year
+    date_generated_era = pd.date_range(y2d_start, periods=365)
+    cum_df_era = pd.DataFrame(date_generated_era)
+    values_list = []
+    for date in cum_df_era[0]:
         i = 1
-        # print(date)
-        for val in era5_df[0]:
+        for val in avg_df["data_values"]:
             if date.month == i:
-                values_list_era5.append(val * 1000)  # in m so convert to mm
+                values_list.append(val)
             i = i + 1
-
-    cum_df_era5['val_per_day'] = values_list_era5
-    cum_df_era5['date'] = cum_df_era5[0].dt.strftime("%Y-%m-%d")
-    cum_df_era5["data_values"] = cum_df_era5['val_per_day'].cumsum()
-    era5_df = cum_df_era5
+    # multiply by 1000 to convert into mm from meters
+    cum_df_era['val_per_day'] = values_list
+    cum_df_era['date'] = cum_df_era[0].dt.strftime("%Y-%m-%d")
+    cum_df_era["data_values"] = (cum_df_era['val_per_day'] * 1000).cumsum()
+    era5_df = cum_df_era
 
     # get Imerg data
-    imerg_1m_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_MONTHLY_V06")
-    imerg_1m_values_ic = imerg_1m_ic.select('precipitation').map(avg_in_bounds)
+    imerg_1m_ic = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/imerg_monthly_avg/imerg_monthly_avg_{i:02}' for i in range(1, 13)])
+
+    imerg_1m_values_ic = imerg_1m_ic.select('HQprecipitation').map(avg_in_bounds)
 
     imerg_1m_df = pd.DataFrame(
         imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
-        index=pd.to_datetime(np.array(imerg_1m_values_ic.aggregate_array('system:time_start').getInfo()) * 1e6, )
     ).dropna()
 
-    # depth = mm/hr * days_in_month * hours_in_day
-    imerg_1m_df['precip_depth'] = imerg_1m_df['precipitation'] * np.array(
-        [calendar.monthrange(i.year, i.month)[1] * 24 for i in imerg_1m_df.index])
+    print(imerg_1m_df)
 
-    # group
-    imerg_mon_avg_df = imerg_1m_df.groupby(imerg_1m_df.index.month).mean()
-    imerg_mon_avg_df['data_values'] = imerg_mon_avg_df['precip_depth'].cumsum()
-    imerg_mon_avg_df['datetime'] = [
-        datetime.datetime(year=int(now[:4]), month=i, day=calendar.monthrange(int(now[:4]), i)[1]) for i in
-        imerg_mon_avg_df.index]
-    imerg_mon_avg_df['date'] = imerg_mon_avg_df['datetime'].dt.strftime("%Y-%m-%d")
+    date_generated = pd.date_range(y2d_start, periods=365)
+    imerg_cum_df = pd.DataFrame(date_generated)
+
+    values_list = []
+    for date in imerg_cum_df[0]:
+        i = 1
+        # print("printing date")
+        # print (date)
+        for val in imerg_1m_df["HQprecipitation"]:
+            if date.month == i:
+                values_list.append(val * 24)
+            i = i + 1
+    # print(values_list)
+
+    imerg_cum_df["val_per_day"] = values_list
+    imerg_cum_df["data_values"] = imerg_cum_df["val_per_day"].cumsum()
+
+    imerg_cum_df['date'] = imerg_cum_df[0].dt.strftime("%Y-%m-%d")
 
     # get chirps
-    chirps_pentad_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/PENTAD')
-    days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])
-    end_of_month_datetimes = np.array(
-        [datetime.datetime(year=int(now[:4]), month=i, day=calendar.monthrange(int(now[:4]), i)[1]) for i in
-         range(1, 13)])
+    chirps_pentad_ic = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
 
-    chirps_avg_ic = chirps_pentad_ic.filterDate(avg_start, now).select('precipitation').map(clip_to_bounds).map(
+    def chirps_avg(img):
+        return img.set('avg_value', img.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=point,
+        ).get('precipitation'))
+
+    days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])
+
+    chirps_avg_ic = chirps_pentad_ic.select('precipitation').map(clip_to_bounds).map(
         chirps_avg)
     chirps_df = pd.DataFrame(
         chirps_avg_ic.aggregate_array('avg_value').getInfo(),
-        index=pd.to_datetime(np.array(chirps_avg_ic.aggregate_array('system:time_start').getInfo()) * 1e6),
+
         columns=['depth', ]
     ).dropna()
 
-    chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
-    chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
-    chirps_monthly_df['data_values'] = chirps_monthly_df['depth'].cumsum() * days_in_month / 5
-    chirps_monthly_df['datetime'] = end_of_month_datetimes
-    chirps_monthly_df = pd.concat(
-        [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_monthly_df.columns),
-         chirps_monthly_df])
-    chirps_monthly_df['date'] = chirps_monthly_df['datetime'].dt.strftime("%Y-%m-%d")
+    chirps_df['data_values'] = chirps_df['depth'].cumsum() * days_in_month / 5
+    chirps_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=chirps_df.index[i] + 1, day=15) for i in
+                             chirps_df.index]
+
+    chirps_df['date'] = chirps_df['datetime'].dt.strftime("%Y-%m-%d")
 
     title = "Precipitation"
 
-    Dict = {'imerg': imerg_mon_avg_df, 'chirps': chirps_monthly_df, 'era5': era5_df, 'gldas': gldas_avg_df,
+    Dict = {'imerg': imerg_cum_df, 'chirps': chirps_df, 'era5': era5_df, 'gldas': gldas_avg_df,
             'title': title, 'yaxis': "mm of precipitation"}
 
     return (Dict)
