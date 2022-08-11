@@ -149,8 +149,6 @@ def plot_GLDAS(region, band, title, yaxis):
         values_list = []
         for date in cum_df[0]:
             i = 1
-            # print("printing date")
-            # print (date)
             for val in gldas_avg_df["Rainf_tavg"]:
                 if date.month == i:
                     # convert from seconds to days
@@ -173,13 +171,16 @@ def plot_GLDAS(region, band, title, yaxis):
     )
     gldas_ytd_df['date'] = gldas_ytd_df.index.strftime("%Y-%m-%d")
 
-    if band == "Rainf_tavg":
-        # multiply values by seconds in 3 hours because they are in 3 hour chunks
-        gldas_ytd_df["data_values"] = (gldas_ytd_df[band] * 10800).cumsum()
+    if band == "Rainf_f_tavg":
+        gldas_ytd_df["data_values"] = gldas_ytd_df[band].cumsum()
     else:
         gldas_ytd_df["data_values"] = gldas_ytd_df[band]
+        gldas_ytd_df = gldas_ytd_df.groupby('date').mean()
+        gldas_ytd_df.rename(index={0: 'index'}, inplace=True)
+        gldas_ytd_df['date'] = gldas_ytd_df.index
 
     Dict = {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis': yaxis}
+    print(Dict)
 
     return Dict
 

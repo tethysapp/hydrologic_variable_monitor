@@ -237,6 +237,7 @@ const App = (() => {
                 //get variable for plan from json
                 var averages = JSON.parse(data['avg'])
                 var y2d = JSON.parse(data['y2d'])
+                console.log(y2d)
                 var title = data['title']
                 var yaxis = data['yaxis']
 
@@ -245,6 +246,7 @@ const App = (() => {
 
                 var date_extracted_avg = Object.values(averages.date)
                 var date_extracted_y2d = Object.values(y2d.date)
+                console.log(temp_extracted_avg)
 
                 var year_2_date = {
                     x: date_extracted_y2d,
