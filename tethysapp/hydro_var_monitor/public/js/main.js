@@ -50,7 +50,7 @@ const App = (() => {
 
      map = L.map('map').setView([20, -40], 3);
 
-     image_layer = L.tileLayer('',{attribution:
+     image_layer = L.tileLayer('',{opacity: 0.5, attribution:
           '<a href="https://earthengine.google.com" target="_">' +
           'Google Earth Engine</a>;'}).addTo(map);
 
