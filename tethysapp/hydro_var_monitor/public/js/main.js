@@ -16,6 +16,31 @@ const App = (() => {
     const btnPlotSeries = document.getElementById("plot-series")
     const btnCompare = document.getElementById("compare")
     const btnInstructions = document.getElementById("instructions")
+    const btnDownload = document.getElementById("download")
+
+
+    const download = function (data, file_name) {
+
+        // Creating a Blob for having a csv file format
+        // and passing the data with type
+        const blob = new Blob([data], { type: 'text/csv' });
+
+        // Creating an object for downloading url
+        const url = window.URL.createObjectURL(blob)
+
+        // Creating an anchor(a) tag of HTML
+        const a = document.createElement('a')
+
+        // Passing the blob downloading url
+        a.setAttribute('href', url)
+
+        // Setting the anchor tag attribute for downloading
+        // and passing the download file name
+        a.setAttribute('download', file_name);
+
+        // Performing a download with click
+        a.click()
+    }
 
     ////////////////////////////////////////////////// Map and Map Layers
 
@@ -212,8 +237,42 @@ const App = (() => {
                     yaxis: {
                         title: yaxis
                     }
+
                 };
                 Plotly.newPlot('chart', data, layout);
+                btnDownload.onclick= ()=>{
+                    //console.log(average)
+                    let list_era5 = ['date,value']
+                    era5_plt.x.forEach((num1, index) => {
+                      const num2 = era5_plt.y[index];
+                      list_era5.push((num1+","+num2));
+                    })
+                    let csvContent_era5 = list_era5.join("\n");
+                    download(csvContent_era5, "era5_averages")
+                    let list_gldas = ['date,value']
+                    gldas_plt.x.forEach((num1, index) => {
+                      const num2 = gldas_plt.y[index];
+                      list_gldas.push((num1+","+num2));
+                    })
+                    let csvContent_gldas = list_gldas.join("\n");
+                    download(csvContent_gldas, "gldas_averages")
+                    if (dataParams.variable == "precip"){
+                        let list_imerg = ['date,value']
+                        imerg_plt.x.forEach((num1, index) => {
+                            const num2 = imerg_plt.y[index];
+                            list_imerg.push((num1+","+num2));
+                        })
+                        let csvContent_imerg = list_imerg.join("\n");
+                        download(csvContent_imerg, "imerg_averages")
+                        let list_chirps = ['date,value']
+                        chirps_plt.x.forEach((num1, index) => {
+                            const num2 = chirps_plt.y[index];
+                            list_chirps.push((num1+","+num2));
+                        })
+                        let csvContent_chirps= list_chirps.join("\n");
+                        download(csvContent_chirps, "chirps_averages")
+                    }
+                }
             }
         })
     }
@@ -259,7 +318,7 @@ const App = (() => {
                     x: date_extracted_avg,
                     y: temp_extracted_avg,
                     mode: 'lines',
-                    name:"los promedios de los últimos 30 años"
+                    name:"Los promedios de los últimos 30 años"
                 };
 
                 console.log(average)
@@ -287,9 +346,25 @@ const App = (() => {
                     }
                 };
                 Plotly.newPlot('chart', data, layout);
+                btnDownload.onclick= ()=>{
+                    console.log(average)
+                    let list_avg = ['date,value']
+                    average.x.forEach((num1, index) => {
+                      const num2 = average.y[index];
+                      list_avg.push((num1+","+num2));
+                    })
+                    let csvContent_avg = list_avg.join("\n");
+                    download(csvContent_avg, "averages")
+                    let list_y2d = ['date,value']
+                    year_2_date.x.forEach((num1, index) => {
+                      const num2 = year_2_date.y[index];
+                      list_y2d.push((num1+","+num2));
+                    })
+                    let csvContent_y2d = list_y2d.join("\n");
+                    download(csvContent_y2d, "year-to-date")
+                }
 
             }})
-
     }
 
     map.on(L.Draw.Event.CREATED, function (e) {

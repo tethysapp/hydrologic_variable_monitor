@@ -20,6 +20,10 @@
     width: 1000px;
 }
 
+.form-select{
+    width: 100%
+}
+
 #chart {
     height: 550px;
     width: 900px;

@@ -29,7 +29,7 @@
 
   <li class="title">3. Cargar Datos </li>
   <button  id="load-map" type="button" class="btn btn-primary btn-block" >Cargar Mapa</button>
-  <button id="clear-map" type="button" class="btn btn-primary btn-block">Mapa Claro</button>
+  <button id="clear-map" type="button" class="btn btn-primary btn-block">Despejar Mapa</button>
   <button id="plot-series" class="btn btn-primary btn-block">Mostrar Gráfico</button>
 
   <li class="title">4. Comparar los Promedios</li>
@@ -76,39 +76,13 @@
             </div><!-- /.tab-pane -->
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+          <button id = "download" type="button" class="btn btn-default">Descargar</button>
         </div>
       </div>
     </div>
   </div>
-  <div class="modal fade" id="about_modal" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                  aria-hidden="true">&times;</span></button>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="csv_modal" role="dialog">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                  aria-hidden="true">&times;</span></button>
-          <h2 style="text-align: center">Upload Observational Data</h2>
-        </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+</div>
 
     <!-- Modal -->
 <div id="myModal" class="modal fade" role="dialog">
@@ -125,10 +99,10 @@
             escoja “cargar mapa” para visualizar una imagen del conjunto de datos o  escoger
             “mostrar gráfico” para observar un gráfico de la variable con el paso del tiempo. Por favor
             tenga paciencia!, puede tardar hasta cinco minutos o más para cargar los gráficos. Finalmente,
-            para visualizar los promedios de algunos conjuntos de datos hacer clic en “comparar promedios.</p>
+            para visualizar los promedios de algunos conjuntos de datos hacer clic en “comparar promedios".</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
       </div>
     </div>
 

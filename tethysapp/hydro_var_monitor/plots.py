@@ -113,9 +113,7 @@ def plot_ERA5(region, band, title, yaxis):
     else:
         y2d_df["data_values"] = y2d_df["data_values"]
 
-    Dict = {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis': yaxis}
-
-    return Dict
+    return {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis': yaxis}
 
 
 def plot_GLDAS(region, band, title, yaxis):
@@ -171,7 +169,7 @@ def plot_GLDAS(region, band, title, yaxis):
     )
     gldas_ytd_df['date'] = gldas_ytd_df.index.strftime("%Y-%m-%d")
 
-    if band == "Rainf_f_tavg":
+    if band == "Rainf_tavg":
         gldas_ytd_df["data_values"] = (gldas_ytd_df[band] * 10800).cumsum()
     else:
         gldas_ytd_df["data_values"] = gldas_ytd_df[band]
