@@ -44,15 +44,15 @@ def NDVI(region):
     # geometry and name it "point" or set the point coordinates with the
     # ee.Geometry.Point() function as demonstrated here.
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
-    print(point)
+    area= ee.Geometry.Polygon(get_coord["coordinates"])
+    #print(point)
 
     # Import the Landsat 8 TOA image collection.
     l8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA');
 
     # Get the least cloudy image in 2015.
     image = ee.Image(
-        l8.filterBounds(point)
+        l8.filterBounds(area)
         .filterDate('2021-01-01', '2022-12-31')
         .sort('CLOUD_COVER')
         .first()

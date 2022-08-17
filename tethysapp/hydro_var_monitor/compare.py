@@ -8,6 +8,11 @@ import numpy as np
 
 def precip_compare(region):
     # get needed functions
+
+    now, avg_start, y2d_start = get_current_date()
+    get_coord = region["geometry"]
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
+
     def get_val_at_xypoint(img):
         # reduction function
         temp = img.reduceRegion(
@@ -40,7 +45,7 @@ def precip_compare(region):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=area,
-            scale=1e6,
+            #scale=1e6,
         ))
 
     def avg_in_bounds(img):
@@ -55,9 +60,6 @@ def precip_compare(region):
             geometry=area,
         ).get('precipitation'))
 
-    now, avg_start, y2d_start = get_current_date()
-    get_coord = region["geometry"]
-    area = ee.Geometry.Polygon(get_coord["coordinates"])
 
     # get gldas data
     gldas_monthly = ee.ImageCollection(
@@ -92,6 +94,7 @@ def precip_compare(region):
     cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
     cum_df_gldas["data_values"] = cum_df_gldas['val_per_day'].cumsum()
     gldas_avg_df = cum_df_gldas
+    print(gldas_avg_df)
     # set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
     avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
@@ -112,7 +115,7 @@ def precip_compare(region):
     cum_df_era['date'] = cum_df_era[0].dt.strftime("%Y-%m-%d")
     cum_df_era["data_values"] = (cum_df_era['val_per_day'] * 1000).cumsum()
     era5_df = cum_df_era
-
+    print(era5_df)
     # get Imerg data
     imerg_1m_ic = ee.ImageCollection(
         [f'users/rachelshaylahuber55/imerg_monthly_avg/imerg_monthly_avg_{i:02}' for i in range(1, 13)])
