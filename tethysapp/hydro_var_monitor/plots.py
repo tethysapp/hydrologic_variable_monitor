@@ -37,18 +37,18 @@ def plot_ERA5(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
 
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
     # read in img col
     img_col_avg = ee.ImageCollection(
         [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
-    img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", point, y2d_start, now)
+    img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", area, y2d_start, now)
 
     # define functions that will be applied
     def get_val_at_xypoint(img):
         # reduction function
         temp = img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             maxPixels=1e12,
         )
         # set the result as a metadata property in the image
@@ -70,12 +70,12 @@ def plot_ERA5(region, band, title, yaxis):
     def avg_era(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             scale=1e6,
         ))
 
     avg_img = img_col_avg.select(band).map(avg_era)
-    y2d_df = get_df(band, img_col_y2d, point)
+    y2d_df = get_df(band, img_col_y2d, area)
 
     avg_df = pd.DataFrame(
         avg_img.aggregate_array('avg_value').getInfo(),
@@ -118,18 +118,20 @@ def plot_ERA5(region, band, title, yaxis):
 
 def plot_GLDAS(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
+    print(region)
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
+
     gldas_ic = ee.ImageCollection("NASA/GLDAS/V021/NOAH/G025/T3H")
 
     # define necessary functions
     def clip_to_bounds(img):
-        return img.updateMask(ee.Image.constant(1).clip(point).mask())
+        return img.updateMask(ee.Image.constant(1).clip(area).mask())
 
     def avg_gldas(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             scale=1e6,
         ))
 
@@ -186,12 +188,12 @@ def plot_GLDAS(region, band, title, yaxis):
 def plot_IMERG(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
 
     def avg_in_bounds(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
         ))
 
     imerg_1m_ic = ee.ImageCollection(
@@ -254,18 +256,18 @@ def plot_IMERG(region):
 def plot_CHIRPS(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
     chirps_daily_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
     chirps_pentad_ic = ee.ImageCollection(
         [f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
 
     def clip_to_bounds(img):
-        return img.updateMask(ee.Image.constant(1).clip(point).mask())
+        return img.updateMask(ee.Image.constant(1).clip(area).mask())
 
     def chirps_avg(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
         ).get('precipitation'))
 
     days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])

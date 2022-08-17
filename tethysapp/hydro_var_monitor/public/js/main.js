@@ -98,12 +98,12 @@ const App = (() => {
          edit: true,
        },
        draw: {
-         marker: true,
+         marker: false,
          polyline: false,
          circlemarker: false,
          circle: false,
-         polygon: false,
-         rectangle: false,
+         polygon: true,
+         rectangle: true,
          trash: true,
        },
      });
