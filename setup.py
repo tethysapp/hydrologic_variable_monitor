@@ -21,7 +21,7 @@ setup(
     description='View maps and plots of hydrological cycle variables recorded by satellites and global models',
     long_description='',
     keywords='',
-    author='Riley Hales',
+    author='Riley Hales, Rachel Huber',
     author_email='rchales@byu.edu',
     url='',
     license='BSD 3-Clause',
