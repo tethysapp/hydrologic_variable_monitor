@@ -368,6 +368,7 @@ const App = (() => {
     }
 
     map.on(L.Draw.Event.CREATED, function (e) {
+        drawnItems.clearLayers()
         drawnItems.addLayer(e.layer);
         input_spatial = JSON.stringify(e.layer.toGeoJSON());
       });
