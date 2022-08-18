@@ -37,18 +37,18 @@ def plot_ERA5(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
 
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
     # read in img col
     img_col_avg = ee.ImageCollection(
         [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
-    img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", point, y2d_start, now)
+    img_col_y2d = get_collection("ECMWF/ERA5_LAND/HOURLY", area, y2d_start, now)
 
     # define functions that will be applied
     def get_val_at_xypoint(img):
         # reduction function
         temp = img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             maxPixels=1e12,
         )
         # set the result as a metadata property in the image
@@ -70,12 +70,12 @@ def plot_ERA5(region, band, title, yaxis):
     def avg_era(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             scale=1e6,
         ))
 
     avg_img = img_col_avg.select(band).map(avg_era)
-    y2d_df = get_df(band, img_col_y2d, point)
+    y2d_df = get_df(band, img_col_y2d, area)
 
     avg_df = pd.DataFrame(
         avg_img.aggregate_array('avg_value').getInfo(),
@@ -113,26 +113,25 @@ def plot_ERA5(region, band, title, yaxis):
     else:
         y2d_df["data_values"] = y2d_df["data_values"]
 
-    Dict = {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis': yaxis}
-
-    return Dict
+    return {'avg': avg_df, 'y2d': y2d_df, 'title': title, 'yaxis': yaxis}
 
 
 def plot_GLDAS(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
+    print(region)
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
+
     gldas_ic = ee.ImageCollection("NASA/GLDAS/V021/NOAH/G025/T3H")
 
     # define necessary functions
     def clip_to_bounds(img):
-        return img.updateMask(ee.Image.constant(1).clip(point).mask())
+        return img.updateMask(ee.Image.constant(1).clip(area).mask())
 
     def avg_gldas(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
-            scale=1e6,
+            geometry=area,
         ))
 
     # read in assets from the gldas_monthly folder
@@ -149,8 +148,6 @@ def plot_GLDAS(region, band, title, yaxis):
         values_list = []
         for date in cum_df[0]:
             i = 1
-            # print("printing date")
-            # print (date)
             for val in gldas_avg_df["Rainf_tavg"]:
                 if date.month == i:
                     # convert from seconds to days
@@ -174,12 +171,15 @@ def plot_GLDAS(region, band, title, yaxis):
     gldas_ytd_df['date'] = gldas_ytd_df.index.strftime("%Y-%m-%d")
 
     if band == "Rainf_tavg":
-        # multiply values by seconds in 3 hours because they are in 3 hour chunks
         gldas_ytd_df["data_values"] = (gldas_ytd_df[band] * 10800).cumsum()
     else:
         gldas_ytd_df["data_values"] = gldas_ytd_df[band]
+        gldas_ytd_df = gldas_ytd_df.groupby('date').mean()
+        gldas_ytd_df.rename(index={0: 'index'}, inplace=True)
+        gldas_ytd_df['date'] = gldas_ytd_df.index
 
     Dict = {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis': yaxis}
+    print(Dict)
 
     return Dict
 
@@ -187,12 +187,12 @@ def plot_GLDAS(region, band, title, yaxis):
 def plot_IMERG(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
 
     def avg_in_bounds(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
         ))
 
     imerg_1m_ic = ee.ImageCollection(
@@ -255,18 +255,18 @@ def plot_IMERG(region):
 def plot_CHIRPS(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
     chirps_daily_ic = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
     chirps_pentad_ic = ee.ImageCollection(
         [f'users/rachelshaylahuber55/chirps_monthly_avg/chirps_monthly_avg_{i:02}' for i in range(1, 13)])
 
     def clip_to_bounds(img):
-        return img.updateMask(ee.Image.constant(1).clip(point).mask())
+        return img.updateMask(ee.Image.constant(1).clip(area).mask())
 
     def chirps_avg(img):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
         ).get('precipitation'))
 
     days_in_month = np.array([calendar.monthrange(int(now[:4]), i)[1] for i in range(1, 13)])
@@ -311,7 +311,7 @@ def plot_CHIRPS(region):
 def plot_NDVI(region):
     now, avg_start, y2d_start = get_current_date()
     get_coord = region["geometry"]
-    point = ee.Geometry.Point(get_coord["coordinates"])
+    area = ee.Geometry.Polygon(get_coord["coordinates"])
 
     # functions needed to get data
     # adds ndvi as a band
@@ -361,7 +361,7 @@ def plot_NDVI(region):
     def landsat_avg(img):
         return img.set('avgndvi', img.reduceRegion(
             reducer=ee.Reducer.mean(),
-            geometry=point,
+            geometry=area,
             scale=150,
             maxPixels=1e12,
         ).get('ndvi'))
@@ -370,7 +370,7 @@ def plot_NDVI(region):
     l5_collection = (
         ee.ImageCollection('LANDSAT/LT05/C01/T1_SR')
         # filter by sample locations
-        .filterBounds(point)
+        .filterBounds(area)
         # apply qa mask
         .map(qa_mask)
         # select the spectral bands and rename
@@ -383,7 +383,7 @@ def plot_NDVI(region):
     l7_collection = (
         ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
         # filter by sample locations
-        .filterBounds(point)
+        .filterBounds(area)
         # apply qa mask
         .map(qa_mask)
         # select the spectral bands and rename
@@ -396,7 +396,7 @@ def plot_NDVI(region):
     l8_collection = (
         ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
         # filter by sample locations
-        .filterBounds(point)
+        .filterBounds(area)
         # apply qa mask
         #.map(qa_mask_L8)
         # select the spectral bands and rename
@@ -407,11 +407,11 @@ def plot_NDVI(region):
     )
 
     # merge all of the collections together for long time series
-    landsat_ic = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(point).map(add_ndvi).select(
+    landsat_ic = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(area).map(add_ndvi).select(
         'ndvi').filterDate(avg_start, now).map(landsat_avg).map(set_ymd_properties)
     month_list = ee.List(['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'])
 
-    landsat_ic_y2d = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(point).map(add_ndvi).select(
+    landsat_ic_y2d = l5_collection.merge(l7_collection).merge(l8_collection).filterBounds(area).map(add_ndvi).select(
         'ndvi').filterDate(y2d_start, now).map(landsat_avg)
     y2d_plot = landsat_ic_y2d.aggregate_array('avgndvi').getInfo()
     y2d_date = landsat_ic_y2d.aggregate_array('system:time_start').getInfo()
@@ -422,6 +422,7 @@ def plot_NDVI(region):
     y2d["data_values"] = y2d[0]
     y2d["day"] = dates
     y2d["date"] = y2d["day"].dt.strftime("%Y-%m-%d")
+    y2d.sort_values(by="date").reset_index(drop=True)
 
     def avg_landsat_month(month_str):
         return landsat_ic.filterMetadata('month', 'equals', month_str).mean()
@@ -435,7 +436,7 @@ def plot_NDVI(region):
 
     avg['date'] = [datetime.datetime(year = int(now[:4]), month = avg.index[i]+1, day = 15) for i in avg.index]
 
-    Dict = {'avg': avg, 'y2d': y2d, 'title':"NDVI", ' yaxis': "NO IDEA"}
+    Dict = {'avg': avg, 'y2d': y2d, 'title':"NDVI", 'yaxis': ""}
     print(Dict)
 
     return Dict

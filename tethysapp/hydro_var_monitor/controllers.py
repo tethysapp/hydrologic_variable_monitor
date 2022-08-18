@@ -141,6 +141,7 @@ def get_plot(request):
         sensor = request.GET.get('source', None)
         var = request.GET.get('variable', None)
         region = request.GET.get('region', None)
+        print (region)
 
         if sensor == "ERA5":
             if var == "air_temp":
