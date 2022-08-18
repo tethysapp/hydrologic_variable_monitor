@@ -368,7 +368,7 @@ const App = (() => {
 
             }})
     }
-
+    
     map.on(L.Draw.Event.CREATED, e => {
         drawnItems.clearLayers()
         drawnItems.addLayer(e.layer);
