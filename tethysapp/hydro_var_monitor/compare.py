@@ -13,31 +13,6 @@ def precip_compare(region):
     get_coord = region["geometry"]
     area = ee.Geometry.Polygon(get_coord["coordinates"])
 
-    def get_val_at_xypoint(img):
-        # reduction function
-        temp = img.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=area,
-            maxPixels=1e12,
-        )
-        # set the result as a metadata property in the image
-        return img.set(temp)
-
-    print("past get cal")
-
-    def get_df(band_name, img_col, region):
-        era_df = img_col.select(band_name)
-        era_with_property = era_df.map(get_val_at_xypoint)
-
-        array_of_values = era_with_property.aggregate_array(band_name).getInfo()
-        array_of_datetime_values = era_with_property.aggregate_array('system:time_start').getInfo()
-
-        datetime = pd.to_datetime(np.array(array_of_datetime_values) * 1e6)
-        df = pd.DataFrame(array_of_values, index=datetime)
-        df['day'] = pd.to_datetime(df.index)
-        df['day'] = df['day'].dt.strftime('%m-%d')
-        return df.groupby('day').mean()
-
     def clip_to_bounds(img):
         return img.updateMask(ee.Image.constant(1).clip(area).mask())
 
@@ -53,12 +28,6 @@ def precip_compare(region):
             reducer=ee.Reducer.mean(),
             geometry=area,
         ))
-
-    def chirps_avg(img):
-        return img.set('avg_value', img.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=area,
-        ).get('precipitation'))
 
 
     # get gldas data
@@ -94,7 +63,6 @@ def precip_compare(region):
     cum_df_gldas['date'] = cum_df_gldas[0].dt.strftime("%Y-%m-%d")
     cum_df_gldas["data_values"] = cum_df_gldas['val_per_day'].cumsum()
     gldas_avg_df = cum_df_gldas
-    print(gldas_avg_df)
     # set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
     avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=avg_df.index[i] + 1, day=15) for i in avg_df.index]
@@ -115,7 +83,6 @@ def precip_compare(region):
     cum_df_era['date'] = cum_df_era[0].dt.strftime("%Y-%m-%d")
     cum_df_era["data_values"] = (cum_df_era['val_per_day'] * 1000).cumsum()
     era5_df = cum_df_era
-    print(era5_df)
     # get Imerg data
     imerg_1m_ic = ee.ImageCollection(
         [f'users/rachelshaylahuber55/imerg_monthly_avg/imerg_monthly_avg_{i:02}' for i in range(1, 13)])
@@ -125,8 +92,6 @@ def precip_compare(region):
     imerg_1m_df = pd.DataFrame(
         imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
     ).dropna()
-
-    print(imerg_1m_df)
 
     date_generated = pd.date_range(y2d_start, periods=365)
     imerg_cum_df = pd.DataFrame(date_generated)
@@ -175,10 +140,8 @@ def precip_compare(region):
 
     title = "Precipitation"
 
-    Dict = {'imerg': imerg_cum_df, 'chirps': chirps_df, 'era5': era5_df, 'gldas': gldas_avg_df,
+    return {'imerg': imerg_cum_df, 'chirps': chirps_df, 'era5': era5_df, 'gldas': gldas_avg_df,
             'title': title, 'yaxis': "mm of precipitation"}
-
-    return (Dict)
 
 
 def air_temp_compare(region):
@@ -191,52 +154,28 @@ def air_temp_compare(region):
         return img.set('avg_value', img.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=area,
-            scale=1e6,
         ))
 
-    def get_val_at_xypoint(img):
-        # reduction function
-        temp = img.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=area,
-            maxPixels=1e12,
-        )
-        # set the result as a metadata property in the image
-        return img.set(temp)
-
-    def get_df(band_name, img_col, region):
-        era_df = img_col.select(band_name)
-        era_with_property = era_df.map(get_val_at_xypoint)
-        print('check')
-
-        array_of_values = era_with_property.aggregate_array(band_name).getInfo()
-        array_of_datetime_values = era_with_property.aggregate_array('system:time_start').getInfo()
-
-        datetime = pd.to_datetime(np.array(array_of_datetime_values) * 1e6)
-        df = pd.DataFrame(array_of_values, index=datetime)
-        df['day'] = pd.to_datetime(df.index)
-        df['day'] = df['day'].dt.strftime('%m-%d')
-        return df.groupby('day').mean()
-
     # get era5 dataframe
-    img_col_avg = get_collection("ECMWF/ERA5_LAND/MONTHLY", area, avg_start, now)
-    era5_avg_df = get_df("temperature_2m", img_col_avg, area)
-    print(era5_avg_df)
+    img_col_avg = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
+
+    avg_img = img_col_avg.select("temperature_2m").map(avg_gldas)
+
+    era5_avg_df = pd.DataFrame(
+        avg_img.aggregate_array('avg_value').getInfo(),
+    )
 
     era5_avg_df.columns = ["data_values"]
-    era5_avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=int(i[:2]), day=15) for i in
-                               era5_avg_df.index]
+    era5_avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=era5_avg_df.index[i] + 1, day=15) for i in era5_avg_df.index]
     era5_avg_df['date'] = era5_avg_df['datetime'].dt.strftime("%Y-%m-%d")
     era5_avg_df.reset_index(drop=True, inplace=True)
-    print(era5_avg_df)
 
     # get gldas dataframe
     gldas_monthly = ee.ImageCollection(
         [f'users/rachelshaylahuber55/gldas_monthly/gldas_monthly_avg_{i:02}' for i in range(1, 13)])
     gldas_monthly = gldas_monthly.map(avg_gldas)
 
-    print("made image collection")
-    print(gldas_monthly.first().bandNames().getInfo())
     gldas_avg_df = pd.DataFrame(
         gldas_monthly.aggregate_array('avg_value').getInfo(),
     )
@@ -244,14 +183,11 @@ def air_temp_compare(region):
     gldas_avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=gldas_avg_df.index[i] + 1, day=15)
                                 for i in gldas_avg_df.index]
     gldas_avg_df['date'] = gldas_avg_df['datetime'].dt.strftime("%Y-%m-%d")
-    print(gldas_avg_df)
 
     title = "Air Temperature"
 
-    Dict = {'era5': era5_avg_df, 'gldas': gldas_avg_df,
+    return {'era5': era5_avg_df, 'gldas': gldas_avg_df,
             'title': title, 'yaxis': "temp in K"}
-
-    return (Dict)
 
 
 def surface_temp_compare(region):
@@ -259,7 +195,6 @@ def surface_temp_compare(region):
 
     get_coord = region["geometry"]
     area = ee.Geometry.Polygon(get_coord["coordinates"])
-    print("insurface")
 
     # define functions that will be mapped
     def avg_gldas(img):
@@ -269,35 +204,16 @@ def surface_temp_compare(region):
             scale=1e6,
         ))
 
-    def get_val_at_xypoint(img):
-        # reduction function
-        temp = img.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=area,
-            maxPixels=1e12,
-        )
-        # set the result as a metadata property in the image
-        return img.set(temp)
-
-    def get_df(band_name, img_col, region):
-        era_df = img_col.select(band_name)
-        era_with_property = era_df.map(get_val_at_xypoint)
-
-        array_of_values = era_with_property.aggregate_array(band_name).getInfo()
-        array_of_datetime_values = era_with_property.aggregate_array('system:time_start').getInfo()
-
-        datetime = pd.to_datetime(np.array(array_of_datetime_values) * 1e6)
-        df = pd.DataFrame(array_of_values, index=datetime)
-        df['day'] = pd.to_datetime(df.index)
-        df['day'] = df['day'].dt.strftime('%m-%d')
-        return df.groupby('day').mean()
-
     # get era5 data
-    img_col_avg = get_collection("ECMWF/ERA5_LAND/MONTHLY", area, avg_start, now)
-    era5_avg_df = get_df("skin_temperature", img_col_avg, area)
+    img_col_avg = ee.ImageCollection(
+        [f'users/rachelshaylahuber55/era5_monthly_avg/era5_monthly_{i:02}' for i in range(1, 13)])
+    avg_img = img_col_avg.select("skin_temperature").map(avg_gldas)
+    era5_avg_df = pd.DataFrame(
+        avg_img.aggregate_array('avg_value').getInfo(),
+    )
 
     era5_avg_df.columns = ["data_values"]
-    era5_avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=int(i[:2]), day=15) for i in
+    era5_avg_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=era5_avg_df.index[i] + 1, day=15) for i in
                                era5_avg_df.index]
     era5_avg_df['date'] = era5_avg_df['datetime'].dt.strftime("%Y-%m-%d")
     era5_avg_df.reset_index(drop=True, inplace=True)
@@ -316,7 +232,6 @@ def surface_temp_compare(region):
     gldas_avg_df['date'] = gldas_avg_df['datetime'].dt.strftime("%Y-%m-%d")
 
     title = "Surface Temperature"
-    Dict = {'era5': era5_avg_df, 'gldas': gldas_avg_df,
+    return {'era5': era5_avg_df, 'gldas': gldas_avg_df,
             'title': title, 'yaxis': "temp in K"}
 
-    return (Dict)

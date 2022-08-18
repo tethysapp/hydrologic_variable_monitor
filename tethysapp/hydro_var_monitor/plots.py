@@ -79,7 +79,6 @@ def plot_ERA5(region, band, title, yaxis):
 
     avg_df = pd.DataFrame(
         avg_img.aggregate_array('avg_value').getInfo(),
-        # index=np.array(gldas_avg.aggregate_array('month').getInfo()).astype(int),
     )
     # set date and data values columns that the js code will look for
     avg_df.columns = ["data_values"]
@@ -118,7 +117,6 @@ def plot_ERA5(region, band, title, yaxis):
 
 def plot_GLDAS(region, band, title, yaxis):
     now, avg_start, y2d_start = get_current_date()
-    print(region)
     get_coord = region["geometry"]
     area = ee.Geometry.Polygon(get_coord["coordinates"])
 
@@ -178,10 +176,8 @@ def plot_GLDAS(region, band, title, yaxis):
         gldas_ytd_df.rename(index={0: 'index'}, inplace=True)
         gldas_ytd_df['date'] = gldas_ytd_df.index
 
-    Dict = {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis': yaxis}
-    print(Dict)
+    return {'avg': gldas_avg_df, 'y2d': gldas_ytd_df, 'title': title, 'yaxis': yaxis}
 
-    return Dict
 
 
 def plot_IMERG(region):
@@ -204,7 +200,6 @@ def plot_IMERG(region):
         imerg_1m_values_ic.aggregate_array('avg_value').getInfo(),
     ).dropna()
 
-    print(imerg_1m_df)
 
     date_generated = pd.date_range(y2d_start, periods=365)
     cum_df = pd.DataFrame(date_generated)
@@ -224,7 +219,6 @@ def plot_IMERG(region):
     cum_df["data_values"] = cum_df["val_per_day"].cumsum()
 
     cum_df['date'] = cum_df[0].dt.strftime("%Y-%m-%d")
-    print(cum_df)
 
     imerg_30min_ic = ee.ImageCollection("NASA/GPM_L3/IMERG_V06")
 
@@ -278,15 +272,11 @@ def plot_CHIRPS(region):
 
         columns=['depth', ]
     ).dropna()
-    # chirps_monthly_df = chirps_df.groupby(chirps_df.index.strftime('%m')).mean()
-    # chirps_monthly_df.index = chirps_monthly_df.index.astype(int)
+
 
     chirps_df['data_values'] = chirps_df['depth'].cumsum() * days_in_month / 5
     chirps_df['datetime'] = [datetime.datetime(year=int(now[:4]), month=chirps_df.index[i] + 1, day=15) for i in
                              chirps_df.index]
-    # chirps_df = pd.concat(
-    # [pd.DataFrame([[0, 0, datetime.datetime(int(now[:4]), 1, 1)], ], columns=chirps_df.columns),
-    # chirps_df])
     chirps_df['date'] = chirps_df['datetime'].dt.strftime("%Y-%m-%d")
 
     chirps_ytd_ic = chirps_daily_ic.filterDate(y2d_start, now).select('precipitation').map(clip_to_bounds).map(
@@ -303,9 +293,7 @@ def plot_CHIRPS(region):
     yaxis = "mm of precipitación"
     title = "Acumulados de Precipitación - CHIRPS"
 
-    Dict = {'avg': chirps_df, 'y2d': chirps_ytd_df, 'yaxis': yaxis, 'title': title}
-
-    return Dict
+    return {'avg': chirps_df, 'y2d': chirps_ytd_df, 'yaxis': yaxis, 'title': title}
 
 
 def plot_NDVI(region):
@@ -436,7 +424,4 @@ def plot_NDVI(region):
 
     avg['date'] = [datetime.datetime(year = int(now[:4]), month = avg.index[i]+1, day = 15) for i in avg.index]
 
-    Dict = {'avg': avg, 'y2d': y2d, 'title':"NDVI", 'yaxis': ""}
-    print(Dict)
-
-    return Dict
+    return {'avg': avg, 'y2d': y2d, 'title':"NDVI", 'yaxis': ""}
