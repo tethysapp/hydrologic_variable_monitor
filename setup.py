@@ -17,7 +17,7 @@ resource_files += find_resource_files('tethysapp/' + app_package + '/workspaces'
 
 setup(
     name=release_package,
-    version='0.0.1',
+    version='0.0.2',
     description='View maps and plots of hydrological cycle variables recorded by satellites and global models',
     long_description='',
     keywords='',
