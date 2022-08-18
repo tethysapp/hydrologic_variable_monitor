@@ -32,14 +32,11 @@ def CHIRPS(band):
 
 
 def get_tile_url(ee_image, vis_params):
-    print("in url get")
     map_id_dict = ee.Image(ee_image).getMapId(vis_params)
-    print("finished")
     return map_id_dict['tile_fetcher'].url_format
 
 
 def NDVI(region):
-    print("in ndvi")
     # Define a point of interest. Use the UI Drawing Tools to import a point
     # geometry and name it "point" or set the point coordinates with the
     # ee.Geometry.Point() function as demonstrated here.
@@ -57,7 +54,6 @@ def NDVI(region):
         .sort('CLOUD_COVER')
         .first()
     );
-    print("made image")
 
     # Compute the Normalized Difference Vegetation Index (NDVI).
     nir = image.select('B5');

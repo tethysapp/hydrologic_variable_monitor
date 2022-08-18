@@ -44,21 +44,21 @@ const App = (() => {
 
     ////////////////////////////////////////////////// Map and Map Layers
 
-    var image_layer;
-    var map;
-    var controlL;
-    var input_spatial = "";
+    let image_layer;
+    let map;
+    let controlL;
+    let input_spatial = "";
 
     L.Control.Layers.include({
     getOverlays: function() {
       // create hash to hold all layers
-      var control, layers;
+      let control, layers;
       layers = {};
       control = this;
 
       // loop thru all layers in control
       control._layers.forEach(function(obj) {
-        var layerName;
+        let layerName;
 
         // check if layer is an overlay
         if (obj.overlay) {
@@ -79,12 +79,12 @@ const App = (() => {
           '<a href="https://earthengine.google.com" target="_">' +
           'Google Earth Engine</a>;'}).addTo(map);
 
-     var positron = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+     const positron = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '©OpenStreetMap, ©CartoDB'
         }).addTo(map);
 
-    var baseMaps = {"Basemap":positron}
-    var varMaps = {"Satellite Observation":image_layer}
+    let baseMaps = {"Basemap":positron}
+    let varMaps = {"Satellite Observation":image_layer}
 
     controlL = L.control.layers(baseMaps,varMaps,{position: 'bottomleft'})
     controlL.addTo(map);
@@ -152,7 +152,7 @@ const App = (() => {
         $("#loading-icon").addClass("appear");
         console.log(dataParams)
 
-        $.ajax({
+       $.ajax({
             type: "GET",
             url: URL_COMPARE,
             datatype: "JSON",
@@ -164,59 +164,59 @@ const App = (() => {
 
 
                 //get variables from json for graph - all comparisons have gldas and era5
-                var era5 = JSON.parse(data['era5'])
-                var gldas = JSON.parse(data['gldas'])
-                var title = data['title']
-                var yaxis = data['yaxis']
+                const era5 = JSON.parse(data['era5'])
+                const gldas = JSON.parse(data['gldas'])
+                const title = data['title']
+                const yaxis = data['yaxis']
 
                 console.log(data['title'])
-                var era5_extracted_val= Object.values(era5.data_values)
-                var gldas_extracted_val = Object.values(gldas.data_values)
+                const era5_extracted_val= Object.values(era5.data_values)
+                const gldas_extracted_val = Object.values(gldas.data_values)
 
-                var era5_extracted_date = Object.values(era5.date)
-                var gldas_extracted_date = Object.values(gldas.date)
+                const era5_extracted_date = Object.values(era5.date)
+                const gldas_extracted_date = Object.values(gldas.date)
 
-                var era5_plt = {
+                const era5_plt = {
                     x: era5_extracted_date,
                     y: era5_extracted_val,
                     mode: 'lines',
                     name: "era5"
                 };
 
-                var gldas_plt = {
+                const gldas_plt = {
                     x: gldas_extracted_date,
                     y: gldas_extracted_val,
                     mode: 'lines',
                     name: "gldas"
                 };
 
+                let data_plt = [era5_plt, gldas_plt]
+                console.log(data_plt)
+
                 //add imerg and chirps if it is precipitation
                 if (dataParams.variable == "precip") {
-                    var imerg = JSON.parse(data['imerg'])
-                    var chirps = JSON.parse(data['chirps'])
-                    var imerg_extracted_val= Object.values(imerg.data_values)
-                    var chirps_extracted_val = Object.values(chirps.data_values)
-                    var imerg_extracted_date = Object.values(imerg.date)
-                    var chirps_extracted_date = Object.values(chirps.date)
-                    var chirps_plt = {
+                    const imerg = JSON.parse(data['imerg'])
+                    const chirps = JSON.parse(data['chirps'])
+                    const imerg_extracted_val= Object.values(imerg.data_values)
+                    const chirps_extracted_val = Object.values(chirps.data_values)
+                    const imerg_extracted_date = Object.values(imerg.date)
+                    const chirps_extracted_date = Object.values(chirps.date)
+                    const chirps_plt = {
                         x: chirps_extracted_date,
                         y: chirps_extracted_val,
                         mode: 'lines',
                         name: "chirps"
                     };
-                    var imerg_plt = {
+                    const imerg_plt = {
                         x: imerg_extracted_date,
                         y: imerg_extracted_val,
                         mode: 'lines',
                         name: "imerg"
                     };
-                    var data = [era5_plt, gldas_plt, chirps_plt, imerg_plt];
-                }
-                else{
-                    var data = [era5_plt, gldas_plt]
+                    data_plt = [era5_plt, gldas_plt, chirps_plt, imerg_plt];
                 }
 
-                var layout = {
+                const layout = {
                     legend: {
                         x: 0,
                         y: 1,
@@ -239,7 +239,7 @@ const App = (() => {
                     }
 
                 };
-                Plotly.newPlot('chart', data, layout);
+                Plotly.newPlot('chart', data_plt, layout);
                 btnDownload.onclick= ()=>{
                     //console.log(average)
                     let list_era5 = ['date,value']
@@ -289,32 +289,34 @@ const App = (() => {
             url: URL_GETPLOT,
             datatype:"JSON",
             data: dataParams,
-            success: function(data) {
+            success: data => {
                 console.log("success!")
                 $('#chart_modal').modal("show")
                 $("#loading-icon").removeClass("appear");
+                //data = JSON.parse(data)
+                //console.log(data)
                 //get variable for plan from json
-                var averages = JSON.parse(data['avg'])
-                var y2d = JSON.parse(data['y2d'])
+                const averages = JSON.parse(data['avg'])
+                const y2d = JSON.parse(data['y2d'])
                 console.log(y2d)
-                var title = data['title']
-                var yaxis = data['yaxis']
+                const title = data['title']
+                const yaxis = data['yaxis']
 
-                var temp_extracted_avg = Object.values(averages.data_values)
-                var temp_extracted_y2d = Object.values(y2d.data_values)
+                const temp_extracted_avg = Object.values(averages.data_values)
+                const temp_extracted_y2d = Object.values(y2d.data_values)
 
-                var date_extracted_avg = Object.values(averages.date)
-                var date_extracted_y2d = Object.values(y2d.date)
+                const date_extracted_avg = Object.values(averages.date)
+                const date_extracted_y2d = Object.values(y2d.date)
                 console.log(temp_extracted_avg)
 
-                var year_2_date = {
+                const year_2_date = {
                     x: date_extracted_y2d,
                     y: temp_extracted_y2d,
                     mode: 'lines',
                     name: "El año hasta la fecha"
                 };
 
-                var average = {
+                const average = {
                     x: date_extracted_avg,
                     y: temp_extracted_avg,
                     mode: 'lines',
@@ -322,8 +324,8 @@ const App = (() => {
                 };
 
                 console.log(average)
-                var data = [year_2_date, average];
-                var layout = {
+                const date_plt = [year_2_date, average];
+                const layout = {
                     legend: {
                         x: 0,
                         y: 1,
@@ -345,7 +347,7 @@ const App = (() => {
                         title: yaxis
                     }
                 };
-                Plotly.newPlot('chart', data, layout);
+                Plotly.newPlot('chart', date_plt, layout);
                 btnDownload.onclick= ()=>{
                     console.log(average)
                     let list_avg = ['date,value']
@@ -366,8 +368,8 @@ const App = (() => {
 
             }})
     }
-
-    map.on(L.Draw.Event.CREATED, function (e) {
+    
+    map.on(L.Draw.Event.CREATED, e => {
         drawnItems.clearLayers()
         drawnItems.addLayer(e.layer);
         input_spatial = JSON.stringify(e.layer.toGeoJSON());

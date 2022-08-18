@@ -30,7 +30,6 @@ def home(request):
 
 
 def compare(request):
-    print("woohoo!")
     response_data = {'success': False}
     try:
         # log.debug(f'GET: {request.GET}')
@@ -45,7 +44,6 @@ def compare(request):
             dict = precip_compare(json.loads(region))
 
         if var == "soil_temperature":
-            print(var)
             dict = surface_temp_compare(json.loads(region))
 
         response_data.update({
@@ -141,7 +139,6 @@ def get_plot(request):
         sensor = request.GET.get('source', None)
         var = request.GET.get('variable', None)
         region = request.GET.get('region', None)
-        print (region)
 
         if sensor == "ERA5":
             if var == "air_temp":
@@ -156,7 +153,7 @@ def get_plot(request):
                 band = "skin_temperature"
                 title = "Temperatura del Suelo- ERA5"
                 yaxis = "temperatura in K"
-            dict = plot_ERA5(json.loads(region), band, title, yaxis)
+            plot_data = plot_ERA5(json.loads(region), band, title, yaxis)
 
         if sensor == "GLDAS":
             if var == "precip":
@@ -175,16 +172,16 @@ def get_plot(request):
                 band = "AvgSurfT_inst"
                 title = "Temperatura del Suelo - GLDAS"
                 yaxis = "temperatura in K"
-            dict = plot_GLDAS(json.loads(region), band, title, yaxis)
+            plot_data = plot_GLDAS(json.loads(region), band, title, yaxis)
 
         if sensor == "IMERG":
-            dict = plot_IMERG(json.loads(region))
+            plot_data = plot_IMERG(json.loads(region))
 
         if sensor == "CHIRPS":
-            dict = plot_CHIRPS(json.loads(region))
+            plot_data = plot_CHIRPS(json.loads(region))
 
         if sensor == "Landsat":
-            dict = plot_NDVI(json.loads(region))
+            plot_data = plot_NDVI(json.loads(region))
 
         response_data.update({
             'success': True,
@@ -192,4 +189,4 @@ def get_plot(request):
 
     except Exception as e:
         response_data['error'] = f'Error Processing Request: {e}'
-    return JsonResponse(json.loads(json.dumps(dict)))
+    return JsonResponse(json.loads(json.dumps(plot_data)))
